@@ -1,5 +1,6 @@
 import gleam/bit_array
 import gleam/bytes_builder
+import gleam/int
 import gleam/io
 import gleam/result
 import gleam/string
@@ -58,6 +59,11 @@ fn handle_request(request_parts) {
     [request_line, ..] ->
       case request_line |> string.split(" ") {
         ["GET", "/", ..] -> "HTTP/1.1 200 OK\r\n\r\n"
+        ["GET", "/echo/" <> str, ..] ->
+          "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "
+          <> str |> string.byte_size |> int.to_string
+          <> "\r\n\r\n"
+          <> str
         _ -> "HTTP/1.1 404 Not Found\r\n\r\n"
       }
     _ -> "HTTP/1.1 404 Not Found\r\n\r\n"
