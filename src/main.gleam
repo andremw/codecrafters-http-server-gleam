@@ -1,3 +1,4 @@
+import gleam/bytes_builder
 import gleam/io
 
 import gleam/erlang/process
@@ -19,8 +20,14 @@ pub fn main() {
   // Uncomment this block to pass the first stage
   //
   let assert Ok(_) =
-    glisten.handler(fn(_conn) { #(Nil, None) }, fn(_msg, state, _conn) {
+    glisten.handler(fn(_conn) { #(Nil, None) }, fn(_msg, state, conn) {
       io.println("Received message!")
+
+      let assert Ok(_) =
+        "HTTP/1.1 200 OK\r\n\r\n"
+        |> bytes_builder.from_string
+        |> glisten.send(conn, _)
+
       actor.continue(state)
     })
     |> glisten.serve(4221)
