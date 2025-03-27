@@ -1,7 +1,9 @@
 import gleam/bit_array
 import gleam/bytes_builder
+import gleam/dict.{type Dict}
 import gleam/int
 import gleam/io
+import gleam/list
 import gleam/result
 import gleam/string
 
@@ -32,8 +34,7 @@ pub fn main() {
 
       let assert Ok(bytes) =
         msg
-        |> result.map(to_request_parts)
-        |> result.try(parse)
+        |> result.map(parse)
         |> result.map(handle_request)
         |> result.map(bytes_builder.from_string)
 
@@ -51,33 +52,45 @@ pub fn main() {
 //   value
 // }
 
-fn to_request_parts(request_string) {
-  request_string |> string.split("\r\n")
-}
-
 type Request {
-  Request(method: String, path: String)
+  Request(method: String, path: String, headers: Dict(String, String))
 }
 
-fn parse(request_parts) {
-  case request_parts {
-    [request_line, ..] ->
-      case request_line |> string.split(" ") {
-        [method, path, ..] -> Ok(Request(method, path))
-        _ -> Error(Nil)
-      }
-    _ -> Error(Nil)
-  }
+fn parse(request_string) {
+  let assert [top, ..] = request_string |> string.split("\r\n\r\n")
+  let assert [request_line, ..headers] = top |> string.split("\r\n")
+  let assert [method, path, ..] = request_line |> string.split(" ")
+
+  let headers =
+    headers
+    |> list.map(fn(header_string) {
+      let assert [name, value] = header_string |> string.split(": ")
+      #(name, value)
+    })
+    |> dict.from_list
+
+  Request(method, path, headers)
 }
 
 fn handle_request(request) {
   case request {
-    Request(method: "GET", path: "/") -> "HTTP/1.1 200 OK\r\n\r\n"
-    Request(method: "GET", path: "/echo/" <> str) ->
+    Request(method: "GET", path: "/", ..) -> "HTTP/1.1 200 OK\r\n\r\n"
+    Request(method: "GET", path: "/echo/" <> str, ..) ->
       "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "
       <> str |> string.byte_size |> int.to_string
       <> "\r\n\r\n"
       <> str
+    Request(method: "GET", path: "/user-agent", headers: headers) ->
+      case headers |> dict.get("User-Agent") {
+        Ok(user_agent) -> {
+          let size = user_agent |> string.byte_size |> int.to_string
+          "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "
+          <> size
+          <> "\r\n\r\n"
+          <> user_agent
+        }
+        _ -> "bla"
+      }
     _ -> "HTTP/1.1 404 Not Found\r\n\r\n"
   }
 }
