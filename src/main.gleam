@@ -87,8 +87,12 @@ fn handle_request(request) {
   case request {
     Request(method: "GET", path: "/", ..) -> "HTTP/1.1 200 OK\r\n\r\n"
     Request(method: "GET", path: "/echo/" <> str, headers: headers, ..) -> {
-      let content_encoding_header = case dict.get(headers, "Accept-Encoding") {
-        Ok("gzip") -> "\r\nContent-Encoding: gzip"
+      let content_encoding_header = case
+        headers
+        |> dict.get("Accept-Encoding")
+        |> result.map(string.contains(_, "gzip"))
+      {
+        Ok(True) -> "\r\nContent-Encoding: gzip"
         _ -> ""
       }
 
