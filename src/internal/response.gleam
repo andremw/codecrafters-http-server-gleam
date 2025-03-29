@@ -1,3 +1,4 @@
+import gleam/bytes_builder.{type BytesBuilder}
 import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
@@ -8,7 +9,7 @@ pub opaque type Response {
   Response(
     status_code: String,
     headers: Dict(String, String),
-    body: Option(String),
+    body: Option(BytesBuilder),
   )
 }
 
@@ -37,11 +38,12 @@ fn insert_header(response, header, value) {
 }
 
 pub fn body(response, body) {
-  Response(..response, body: Some(body))
+  Response(..response, body: Some(body |> bytes_builder.from_string))
 }
 
 pub fn format(response: Response) {
   let response = content_length(response)
+  let response = gzip_if_necessary(response)
 
   let top =
     "HTTP/1.1 "
@@ -59,9 +61,13 @@ pub fn format(response: Response) {
     })
     |> string.join("")
 
-  let body = response.body |> option.unwrap("")
+  let body = response.body |> option.unwrap(bytes_builder.new())
 
-  top <> headers_line <> "\r\n\r\n" <> body
+  top
+  |> bytes_builder.from_string
+  |> bytes_builder.append_string(headers_line)
+  |> bytes_builder.append_string("\r\n\r\n")
+  |> bytes_builder.append_builder(body)
 }
 
 fn get_status(status_code) {
@@ -80,7 +86,11 @@ fn content_length(response: Response) {
       insert_header(
         response,
         "Content-Length",
-        body |> string.byte_size |> int.to_string,
+        body |> bytes_builder.byte_size |> int.to_string,
       )
   }
+}
+
+fn gzip_if_necessary(response: Response) {
+  response
 }

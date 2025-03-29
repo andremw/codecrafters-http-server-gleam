@@ -37,7 +37,6 @@ pub fn main() {
         msg
         |> result.map(parse)
         |> result.map(handle_request)
-        |> result.map(bytes_builder.from_string)
 
       let assert Ok(_) = glisten.send(conn, bytes)
 
@@ -112,7 +111,7 @@ fn handle_request(request) {
           |> response.format
         }
         // lol
-        _ -> "bla"
+        _ -> bytes_builder.new()
       }
 
     // files
