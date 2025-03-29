@@ -28,6 +28,10 @@ pub fn content_type(response, value) {
   insert_header(response, "Content-Type", value)
 }
 
+pub fn content_encoding(response, value) {
+  insert_header(response, "Content-Encoding", value)
+}
+
 fn insert_header(response, header, value) {
   Response(..response, headers: dict.insert(response.headers, header, value))
 }

@@ -1,7 +1,6 @@
 import gleam/bit_array
 import gleam/bytes_builder
 import gleam/dict.{type Dict}
-import gleam/int
 import gleam/io
 import gleam/list
 import gleam/result
@@ -88,23 +87,21 @@ fn handle_request(request) {
   case request {
     Request(method: "GET", path: "/", ..) -> response.ok() |> response.format
     Request(method: "GET", path: "/echo/" <> str, headers: headers, ..) -> {
-      let content_encoding_header = case
+      let response = response.ok()
+
+      let response = case
         headers
         |> dict.get("Accept-Encoding")
         |> result.map(string.contains(_, "gzip"))
       {
-        Ok(True) -> "\r\nContent-Encoding: gzip"
-        _ -> ""
+        Ok(True) -> response.content_encoding(response, "gzip")
+        _ -> response
       }
 
-      let size = str |> string.byte_size |> int.to_string
-      let content_length_header = "\r\nContent-Length: " <> size
-
-      "HTTP/1.1 200 OK\r\nContent-Type: text/plain"
-      <> content_length_header
-      <> content_encoding_header
-      <> "\r\n\r\n"
-      <> str
+      response
+      |> response.content_type("text/plain")
+      |> response.body(str)
+      |> response.format
     }
     Request(method: "GET", path: "/user-agent", headers: headers, ..) ->
       case headers |> dict.get("User-Agent") {
