@@ -109,11 +109,10 @@ fn handle_request(request) {
     Request(method: "GET", path: "/user-agent", headers: headers, ..) ->
       case headers |> dict.get("User-Agent") {
         Ok(user_agent) -> {
-          let size = user_agent |> string.byte_size |> int.to_string
-          "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "
-          <> size
-          <> "\r\n\r\n"
-          <> user_agent
+          response.ok()
+          |> response.content_type("text/plain")
+          |> response.body(user_agent)
+          |> response.format
         }
         // lol
         _ -> "bla"
