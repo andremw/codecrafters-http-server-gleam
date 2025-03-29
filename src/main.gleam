@@ -141,7 +141,9 @@ fn handle_request(request) {
     ) -> {
       let assert Some(content) = content
       let assert Ok(_) = file_server.create(filename, content)
-      "HTTP/1.1 201 Created\r\n\r\n"
+
+      response.created()
+      |> response.format()
     }
 
     // not found

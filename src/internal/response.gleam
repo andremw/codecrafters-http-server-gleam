@@ -15,6 +15,10 @@ pub fn ok() {
   Response(status_code: "200", headers: dict.new(), body: None)
 }
 
+pub fn created() {
+  Response(status_code: "201", headers: dict.new(), body: None)
+}
+
 pub fn not_found() {
   Response(status_code: "404", headers: dict.new(), body: None)
 }
