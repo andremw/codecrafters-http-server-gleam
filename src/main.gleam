@@ -121,14 +121,15 @@ fn handle_request(request) {
     // files
     Request(method: "GET", path: "/files" <> filename, ..) -> {
       case file_server.serve(filename) {
-        Error(_) -> "HTTP/1.1 404 Not Found\r\n\r\n"
+        Error(_) -> response.not_found() |> response.format
         Ok(content) -> {
-          let size = content |> string.byte_size |> int.to_string
+          let size = content |> string.byte_size
 
-          "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: "
-          <> size
-          <> "\r\n\r\n"
-          <> content
+          response.ok()
+          |> response.content_type("application/octet-stream")
+          |> response.content_length(size)
+          |> response.body(content)
+          |> response.format
         }
       }
     }
