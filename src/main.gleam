@@ -6,6 +6,7 @@ import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
+import internal/file_server
 
 import gleam/erlang/process
 import gleam/option.{None}
@@ -91,6 +92,19 @@ fn handle_request(request) {
         }
         _ -> "bla"
       }
+    Request(method: "GET", path: "/files" <> filename, ..) -> {
+      case file_server.serve(filename) {
+        Error(_) -> "HTTP/1.1 404 Not Found\r\n\r\n"
+        Ok(content) -> {
+          let size = content |> string.byte_size |> int.to_string
+
+          "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: "
+          <> size
+          <> "\r\n\r\n"
+          <> content
+        }
+      }
+    }
     _ -> "HTTP/1.1 404 Not Found\r\n\r\n"
   }
 }
