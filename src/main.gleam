@@ -7,6 +7,7 @@ import gleam/list
 import gleam/result
 import gleam/string
 import internal/file_server
+import internal/response
 
 import gleam/erlang/process
 import gleam/option.{type Option, None, Some}
@@ -142,6 +143,11 @@ fn handle_request(request) {
       let assert Ok(_) = file_server.create(filename, content)
       "HTTP/1.1 201 Created\r\n\r\n"
     }
-    _ -> "HTTP/1.1 404 Not Found\r\n\r\n"
+
+    // not found
+    _ -> {
+      response.not_found()
+      |> response.format
+    }
   }
 }
