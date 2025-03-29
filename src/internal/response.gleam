@@ -3,6 +3,7 @@ import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 
 pub opaque type Response {
@@ -92,5 +93,27 @@ fn content_length(response: Response) {
 }
 
 fn gzip_if_necessary(response: Response) {
-  response
+  let needs_gzip =
+    response.headers
+    |> dict.get("Content-Encoding")
+    |> result.map(string.contains(_, "gzip"))
+    |> result.unwrap(False)
+
+  case response.body, needs_gzip {
+    Some(body), True -> {
+      let bytes =
+        body
+        |> bytes_builder.to_bit_array
+        |> gzip
+        |> bytes_builder.from_bit_array
+      Response(..response, body: Some(bytes))
+      // recalculate content_length
+      |> content_length
+    }
+    _, False -> response
+    None, True -> response
+  }
 }
+
+@external(erlang, "zlib", "gzip")
+fn gzip(data: BitArray) -> BitArray
