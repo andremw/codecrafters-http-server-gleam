@@ -115,6 +115,7 @@ fn handle_request(request) {
           <> "\r\n\r\n"
           <> user_agent
         }
+        // lol
         _ -> "bla"
       }
 
@@ -123,11 +124,8 @@ fn handle_request(request) {
       case file_server.serve(filename) {
         Error(_) -> response.not_found() |> response.format
         Ok(content) -> {
-          let size = content |> string.byte_size
-
           response.ok()
           |> response.content_type("application/octet-stream")
-          |> response.content_length(size)
           |> response.body(content)
           |> response.format
         }

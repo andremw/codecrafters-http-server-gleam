@@ -28,10 +28,6 @@ pub fn content_type(response, value) {
   insert_header(response, "Content-Type", value)
 }
 
-pub fn content_length(response, length) {
-  insert_header(response, "Content-Length", length |> int.to_string)
-}
-
 fn insert_header(response, header, value) {
   Response(..response, headers: dict.insert(response.headers, header, value))
 }
@@ -41,6 +37,8 @@ pub fn body(response, body) {
 }
 
 pub fn format(response: Response) {
+  let response = content_length(response)
+
   let top =
     "HTTP/1.1 "
     <> response.status_code
@@ -68,5 +66,17 @@ fn get_status(status_code) {
     "201" -> "Created"
     "404" -> "Not Found"
     _ -> "WAT"
+  }
+}
+
+fn content_length(response: Response) {
+  case response.body {
+    None -> response
+    Some(body) ->
+      insert_header(
+        response,
+        "Content-Length",
+        body |> string.byte_size |> int.to_string,
+      )
   }
 }
