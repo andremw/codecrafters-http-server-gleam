@@ -9,7 +9,7 @@ import gleam/string
 import internal/file_server
 
 import gleam/erlang/process
-import gleam/option.{None}
+import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import glisten
 
@@ -54,11 +54,16 @@ pub fn main() {
 // }
 
 type Request {
-  Request(method: String, path: String, headers: Dict(String, String))
+  Request(
+    method: String,
+    path: String,
+    headers: Dict(String, String),
+    body: Option(String),
+  )
 }
 
 fn parse(request_string) {
-  let assert [top, ..] = request_string |> string.split("\r\n\r\n")
+  let assert [top, body] = request_string |> string.split("\r\n\r\n")
   let assert [request_line, ..headers] = top |> string.split("\r\n")
   let assert [method, path, ..] = request_line |> string.split(" ")
 
@@ -70,7 +75,9 @@ fn parse(request_string) {
     })
     |> dict.from_list
 
-  Request(method, path, headers)
+  let body = body |> string.split("\r\n") |> list.first |> option.from_result
+
+  Request(method, path, headers, body)
 }
 
 fn handle_request(request) {
@@ -81,7 +88,7 @@ fn handle_request(request) {
       <> str |> string.byte_size |> int.to_string
       <> "\r\n\r\n"
       <> str
-    Request(method: "GET", path: "/user-agent", headers: headers) ->
+    Request(method: "GET", path: "/user-agent", headers: headers, ..) ->
       case headers |> dict.get("User-Agent") {
         Ok(user_agent) -> {
           let size = user_agent |> string.byte_size |> int.to_string
@@ -92,6 +99,8 @@ fn handle_request(request) {
         }
         _ -> "bla"
       }
+
+    // files
     Request(method: "GET", path: "/files" <> filename, ..) -> {
       case file_server.serve(filename) {
         Error(_) -> "HTTP/1.1 404 Not Found\r\n\r\n"
@@ -104,6 +113,17 @@ fn handle_request(request) {
           <> content
         }
       }
+    }
+
+    Request(
+      method: "POST",
+      path: "/files" <> filename,
+      headers: _headers,
+      body: content,
+    ) -> {
+      let assert Some(content) = content
+      let assert Ok(_) = file_server.create(filename, content)
+      "HTTP/1.1 201 Created\r\n\r\n"
     }
     _ -> "HTTP/1.1 404 Not Found\r\n\r\n"
   }
