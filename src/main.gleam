@@ -86,7 +86,7 @@ fn parse_headers(headers_line) {
 
 fn handle_request(request) {
   case request {
-    Request(method: "GET", path: "/", ..) -> "HTTP/1.1 200 OK\r\n\r\n"
+    Request(method: "GET", path: "/", ..) -> response.ok() |> response.format
     Request(method: "GET", path: "/echo/" <> str, headers: headers, ..) -> {
       let content_encoding_header = case
         headers
