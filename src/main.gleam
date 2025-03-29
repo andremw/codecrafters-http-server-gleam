@@ -64,30 +64,43 @@ type Request {
 
 fn parse(request_string) {
   let assert [top, body] = request_string |> string.split("\r\n\r\n")
-  let assert [request_line, ..headers] = top |> string.split("\r\n")
+  let assert [request_line, ..headers_line] = top |> string.split("\r\n")
   let assert [method, path, ..] = request_line |> string.split(" ")
 
-  let headers =
-    headers
-    |> list.map(fn(header_string) {
-      let assert [name, value] = header_string |> string.split(": ")
-      #(name, value)
-    })
-    |> dict.from_list
+  let headers = parse_headers(headers_line)
 
   let body = body |> string.split("\r\n") |> list.first |> option.from_result
 
   Request(method, path, headers, body)
 }
 
+fn parse_headers(headers_line) {
+  headers_line
+  |> list.map(fn(header_string) {
+    let assert [name, value] = header_string |> string.split(": ")
+    #(name, value)
+  })
+  |> dict.from_list
+}
+
 fn handle_request(request) {
   case request {
     Request(method: "GET", path: "/", ..) -> "HTTP/1.1 200 OK\r\n\r\n"
-    Request(method: "GET", path: "/echo/" <> str, ..) ->
-      "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "
-      <> str |> string.byte_size |> int.to_string
+    Request(method: "GET", path: "/echo/" <> str, headers: headers, ..) -> {
+      let content_encoding_header = case dict.get(headers, "Accept-Encoding") {
+        Ok("gzip") -> "\r\nContent-Encoding: gzip"
+        _ -> ""
+      }
+
+      let size = str |> string.byte_size |> int.to_string
+      let content_length_header = "\r\nContent-Length: " <> size
+
+      "HTTP/1.1 200 OK\r\nContent-Type: text/plain"
+      <> content_length_header
+      <> content_encoding_header
       <> "\r\n\r\n"
       <> str
+    }
     Request(method: "GET", path: "/user-agent", headers: headers, ..) ->
       case headers |> dict.get("User-Agent") {
         Ok(user_agent) -> {
