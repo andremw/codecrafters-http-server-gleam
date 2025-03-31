@@ -1,15 +1,15 @@
 import gleam/bit_array
 import gleam/bytes_builder
-import gleam/dict.{type Dict}
+import gleam/dict
 import gleam/io
-import gleam/list
 import gleam/result
 import gleam/string
 import internal/file_server
+import internal/request.{Request}
 import internal/response
 
 import gleam/erlang/process
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None, Some}
 import gleam/otp/actor
 import glisten
 
@@ -35,7 +35,7 @@ pub fn main() {
 
       let assert Ok(bytes) =
         msg
-        |> result.map(parse)
+        |> result.map(request.parse)
         |> result.map(handle_request)
 
       let assert Ok(_) = glisten.send(conn, bytes)
@@ -51,36 +51,6 @@ pub fn main() {
 //   logger(value)
 //   value
 // }
-
-type Request {
-  Request(
-    method: String,
-    path: String,
-    headers: Dict(String, String),
-    body: Option(String),
-  )
-}
-
-fn parse(request_string) {
-  let assert [top, body] = request_string |> string.split("\r\n\r\n")
-  let assert [request_line, ..headers_line] = top |> string.split("\r\n")
-  let assert [method, path, ..] = request_line |> string.split(" ")
-
-  let headers = parse_headers(headers_line)
-
-  let body = body |> string.split("\r\n") |> list.first |> option.from_result
-
-  Request(method, path, headers, body)
-}
-
-fn parse_headers(headers_line) {
-  headers_line
-  |> list.map(fn(header_string) {
-    let assert [name, value] = header_string |> string.split(": ")
-    #(name, value)
-  })
-  |> dict.from_list
-}
 
 fn handle_request(request) {
   case request {
