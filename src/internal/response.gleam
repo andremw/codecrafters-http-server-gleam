@@ -96,7 +96,8 @@ fn gzip_if_necessary(response: Response) {
   let needs_gzip =
     response.headers
     |> dict.get("Content-Encoding")
-    |> result.map(string.contains(_, "gzip"))
+    |> result.map(string.split(_, " "))
+    |> result.map(list.any(_, fn(encoding) { encoding == "gzip" }))
     |> result.unwrap(False)
 
   case response.body, needs_gzip {
